@@ -30,6 +30,7 @@ pub static mut NEXT_TOKEN: Vec<u8> = Vec::new();
 
 pub static mut LEX_TYPE: Vec<char> = Vec::new();
 
+// This function invokes the other functions in the necessary order and reads the file as it is.
 pub fn main() {
     let path = Path::new("mathy.txt");
     let display = path.display();
@@ -48,6 +49,7 @@ pub fn main() {
     lex();
 }
 
+// This function looks up the values in the array and assigns an appropriate  value at its index-linked position in another array
 fn lookup() {
     unsafe {
         let mut chartype: char = LEXEME[0];
@@ -210,6 +212,7 @@ fn lookup() {
     }
 }
 
+// This function reads the values in the given file and stores it as a character vector.
 fn addchar() -> io::Result<()> {
     unsafe {
         let f = File::open("mathy.txt")?;
@@ -219,13 +222,13 @@ fn addchar() -> io::Result<()> {
             for c in line?.chars() {
                 LEXEME.push(c);
             }
-            LEXEME.push('\n');
         }
 
         Ok(())
     }
 }
 
+// This function does lexical analysis.
 fn lex() {
     unsafe {
         let mut charclass: char = LEX_TYPE[0];
