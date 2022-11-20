@@ -1,3 +1,7 @@
-rst _first = (1 + 8)
-rst _second = (2 * 9)
-
+rst _first = (1 + 8);
+rst _second = (2 * 9);
+rst _third = (3 * 4);
+rst _fourth = (2 * 11);
+rst _fifth = (6 * 12);
+rst _sixth = (3 * 10);
+rst _seventh = (3 * 10);
