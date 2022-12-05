@@ -1,24 +1,58 @@
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::path::Path;
+use utf8_chars::BufReadCharsExt;
 
 pub enum CharType {
-    Letter,
-    Digit,
-    Operator,
-    Unknown,
+    Letter(char),
+    Digit(i32),
+    Operator(char),
+    Unknown(char),
 }
 pub enum TokenType {
-    IntLit,
-    Ident,
-    AssignOp,
-    AddOp,
-    SubOp,
-    MultOp,
-    DivOp,
-    LeftParen,
-    RightParen,
+    IntLit(i32),
+    KeyWord(String),
+    Ident(String),
+    AssignOp(char),
+    AddOp(char),
+    SubOp(char),
+    MultOp(char),
+    DivOp(char),
+    LeftParen(char),
+    RightParen(char),
+}
+
+#[derive(Hash, Eq, PartialEq, Debug, Default)]
+struct Symbol {
+    lokotype: String,
+    value: String,
+}
+
+trait Token {
+    fn tokenize(&self) -> String;
+}
+
+trait Variable {
+    fn variablize(&self) -> String;
+}
+
+struct Lexer {}
+
+/*pub struct SymbolTable<K, V, S = RandomState> {
+    base: base::HashMap<K, V, S>,
+} */
+
+impl Symbol {
+    /*fn insert(&mut self, lokotype: &str, value: char) -> Option<char> {
+        self.base.insert()
+    } */
+
+    fn new(lokotype: &str, value: &str) -> Symbol {
+        Default::default()
+    }
 }
 
 pub static mut CHAR_CLASS: Vec<u8> = Vec::new();
@@ -27,12 +61,15 @@ pub static mut NEXT_CHAR: char = '0';
 pub static mut LEX_LEN: usize = 0;
 pub static mut TOKEN: Vec<u8> = Vec::new();
 pub static mut NEXT_TOKEN: Vec<u8> = Vec::new();
-
 pub static mut LEX_TYPE: Vec<char> = Vec::new();
+pub static mut SYMBOLTABLE: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
+    let mut s = HashMap::new();
+    s
+});
 
 // This function invokes the other functions in the necessary order and reads the file as it is.
 pub fn main() {
-    let path = Path::new("mathy.txt");
+    /*let path = Path::new("mathy.txt");
     let display = path.display();
     let mut file = match File::open(&path) {
         Err(why) => panic!("Could not open {}: {}", display, why),
@@ -42,14 +79,35 @@ pub fn main() {
     match file.read_to_string(&mut s) {
         Err(why) => panic!("Could not read {}: {}", display, why),
         Ok(_) => print!("{} contains:\n{}", display, s),
-    }
+    } */
+    let mut symbols: HashMap<&str, String> = HashMap::default();
+    let mut token = String::new();
 
     addchar().err();
     lookup();
-    lex();
+    unsafe {
+        for i in 0..LEXEME.len() - 1 {
+            lex(i);
+            let lex = lex(i);
+            if !LEXEME[i].is_whitespace() {
+                token.push(lex);
+            } else {
+                continue;
+            }
+            if LEXEME[i + 1].is_whitespace() {
+                for i in 0..token.len() {
+                    if token.chars().all(|x| x.is_alphabetic()) {
+                        let clone = token.clone();
+                        symbols.insert("rar", clone);
+                        token = String::new();
+                    }
+                }
+            }
+        }
+    }
 }
 
-// This function looks up the values in the array and assigns an appropriate  value at its index-linked position in another array
+// This function looks up the values in the array and assigns an appropriate value at its index-linked position in another array
 fn lookup() {
     unsafe {
         let mut chartype: char = LEXEME[0];
@@ -192,7 +250,6 @@ fn lookup() {
                 }
                 '\n' => {
                     LEX_TYPE.push('N');
-                    print!("Line!");
                 }
                 '_' => {
                     LEX_TYPE.push('_');
@@ -216,36 +273,35 @@ fn lookup() {
 fn addchar() -> io::Result<()> {
     unsafe {
         let f = File::open("mathy.txt")?;
-        let f = BufReader::new(f);
-
-        for line in f.lines() {
-            for c in line?.chars() {
-                LEXEME.push(c);
-            }
+        let mut f = BufReader::new(f);
+        for c in f.chars().map(|x| x.unwrap()) {
+            LEXEME.push(c);
         }
-
         Ok(())
     }
 }
 
 // This function does lexical analysis.
-fn lex() {
+fn lex(mut i: usize) -> char {
     unsafe {
-        let mut charclass: char = LEX_TYPE[0];
-        let mut lettercount = 0;
-        for i in 0..LEX_TYPE.len() - 1 {
-            match charclass {
-                'a' => {
-                    print!("{}", LEXEME[i]);
-                    lettercount = lettercount + 1;
-                }
-                'N' => {
-                    print!("{}", LEXEME[i]);
-                    println!();
-                }
-                _ => print!("H"),
+        let mut token = String::new();
+        let mut charclass: char = LEX_TYPE[i];
+        match charclass {
+            'a' => {
+                token.push(LEXEME[i]);
             }
-            charclass = LEX_TYPE[i + 1];
+            'N' => {
+                token.push(LEXEME[i]);
+            }
+            '0' => {
+                token.push(LEXEME[i]);
+            }
+            _ => print!("H"),
         }
+        return LEXEME[i];
     }
+}
+
+fn lexer() {
+    unsafe {}
 }
