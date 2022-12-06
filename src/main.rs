@@ -1,9 +1,8 @@
-use once_cell::sync::Lazy;
+use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
-use std::path::Path;
 use utf8_chars::BufReadCharsExt;
 
 pub enum CharType {
@@ -35,8 +34,8 @@ trait Token {
     fn tokenize(&self) -> String;
 }
 
-trait Variable {
-    fn variablize(&self) -> String;
+struct Char {
+    lokochar: char,
 }
 
 struct Lexer {}
@@ -62,10 +61,6 @@ pub static mut LEX_LEN: usize = 0;
 pub static mut TOKEN: Vec<u8> = Vec::new();
 pub static mut NEXT_TOKEN: Vec<u8> = Vec::new();
 pub static mut LEX_TYPE: Vec<char> = Vec::new();
-pub static mut SYMBOLTABLE: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
-    let mut s = HashMap::new();
-    s
-});
 
 // This function invokes the other functions in the necessary order and reads the file as it is.
 pub fn main() {
@@ -84,189 +79,35 @@ pub fn main() {
     let mut token = String::new();
 
     addchar().err();
-    lookup();
-    unsafe {
-        for i in 0..LEXEME.len() - 1 {
-            lex(i);
-            let lex = lex(i);
-            if !LEXEME[i].is_whitespace() {
-                token.push(lex);
-            } else {
-                continue;
-            }
-            if LEXEME[i + 1].is_whitespace() {
-                for i in 0..token.len() {
-                    if token.chars().all(|x| x.is_alphabetic()) {
-                        let clone = token.clone();
-                        symbols.insert("rar", clone);
-                        token = String::new();
-                    }
-                }
-            }
-        }
+    tokenize();
+    let x = String::from("rnt");
+    if is_type(&x) {
+        println!("Yay!");
     }
 }
 
-// This function looks up the values in the array and assigns an appropriate value at its index-linked position in another array
-fn lookup() {
-    unsafe {
-        let mut chartype: char = LEXEME[0];
-        for i in 0..LEXEME.len() - 1 {
-            match chartype {
-                '+' => {
-                    LEX_TYPE.push('+');
-                }
-                '-' => {
-                    LEX_TYPE.push('-');
-                }
-                '*' => {
-                    LEX_TYPE.push('*');
-                }
-                '/' => {
-                    LEX_TYPE.push('/');
-                }
-                '%' => {
-                    LEX_TYPE.push('%');
-                }
-                '=' => {
-                    LEX_TYPE.push('=');
-                }
-                '(' => {
-                    LEX_TYPE.push('(');
-                }
-                ')' => {
-                    LEX_TYPE.push(')');
-                }
-                '0' => {
-                    LEX_TYPE.push('0');
-                }
-                '1' => {
-                    LEX_TYPE.push('0');
-                }
-                '2' => {
-                    LEX_TYPE.push('0');
-                }
-                '3' => {
-                    LEX_TYPE.push('0');
-                }
-                '4' => {
-                    LEX_TYPE.push('0');
-                }
-                '5' => {
-                    LEX_TYPE.push('0');
-                }
-                '6' => {
-                    LEX_TYPE.push('0');
-                }
-                '7' => {
-                    LEX_TYPE.push('0');
-                }
-                '8' => {
-                    LEX_TYPE.push('0');
-                }
-                '9' => {
-                    LEX_TYPE.push('0');
-                }
-                'a' => {
-                    LEX_TYPE.push('a');
-                }
-                'b' => {
-                    LEX_TYPE.push('a');
-                }
-                'c' => {
-                    LEX_TYPE.push('a');
-                }
-                'd' => {
-                    LEX_TYPE.push('a');
-                }
-                'e' => {
-                    LEX_TYPE.push('a');
-                }
-                'f' => {
-                    LEX_TYPE.push('a');
-                }
-                'g' => {
-                    LEX_TYPE.push('a');
-                }
-                'h' => {
-                    LEX_TYPE.push('a');
-                }
-                'i' => {
-                    LEX_TYPE.push('a');
-                }
-                'j' => {
-                    LEX_TYPE.push('a');
-                }
-                'k' => {
-                    LEX_TYPE.push('a');
-                }
-                'l' => {
-                    LEX_TYPE.push('a');
-                }
-                'm' => {
-                    LEX_TYPE.push('a');
-                }
-                'n' => {
-                    LEX_TYPE.push('a');
-                }
-                'o' => {
-                    LEX_TYPE.push('a');
-                }
-                'p' => {
-                    LEX_TYPE.push('a');
-                }
-                'q' => {
-                    LEX_TYPE.push('a');
-                }
-                'r' => {
-                    LEX_TYPE.push('a');
-                }
-                's' => {
-                    LEX_TYPE.push('a');
-                }
-                't' => {
-                    LEX_TYPE.push('a');
-                }
-                'u' => {
-                    LEX_TYPE.push('a');
-                }
-                'v' => {
-                    LEX_TYPE.push('a');
-                }
-                'w' => {
-                    LEX_TYPE.push('a');
-                }
-                'x' => {
-                    LEX_TYPE.push('a');
-                }
-                'y' => {
-                    LEX_TYPE.push('a');
-                }
-                'z' => {
-                    LEX_TYPE.push('a');
-                }
-                ' ' => {
-                    LEX_TYPE.push(' ');
-                }
-                '\n' => {
-                    LEX_TYPE.push('N');
-                }
-                '_' => {
-                    LEX_TYPE.push('_');
-                }
-                ';' => {
-                    LEX_TYPE.push(';');
-                }
-                _ => {
-                    LEX_TYPE.push('?');
-                    print!(
-                        "Error! This code has a character that cannot be processed by Lokolyzer."
-                    )
-                }
-            }
-            chartype = LEXEME[i + 1];
-        }
-    }
+fn is_variable(var: &str) -> bool {
+    let regex = Regex::new("[a-zA-Z]+(_[a-zA-Z]+)*").unwrap();
+    return regex.is_match(&var);
+}
+
+fn is_operator(op: &str) -> bool {
+    let regex = Regex::new("^\\+|-|\\*|^/$|^%$|^>(=)?$|^<(=)?&|(!|=)?=$").unwrap();
+    return regex.is_match(&op);
+}
+
+fn is_paren(par: &str) -> bool {
+    let regex = Regex::new("^(|)$").unwrap();
+    return regex.is_match(&par);
+}
+
+fn is_number(num: &str) -> bool {
+    let regex = Regex::new("^[0-9]+$").unwrap();
+    return regex.is_match(&num);
+}
+
+fn is_type(typeid: &str) -> bool {
+    return typeid.eq("rnt") || typeid.eq("rort") || typeid.eq("rong");
 }
 
 // This function reads the values in the given file and stores it as a character vector.
@@ -281,24 +122,55 @@ fn addchar() -> io::Result<()> {
     }
 }
 
-// This function does lexical analysis.
-fn lex(mut i: usize) -> char {
+fn tokenize() {
     unsafe {
+        let mut symbols: HashMap<&str, String> = HashMap::default();
         let mut token = String::new();
-        let mut charclass: char = LEX_TYPE[i];
-        match charclass {
-            'a' => {
+        for i in 0..LEXEME.len() - 1 {
+            if !LEXEME[i].is_whitespace()
+                && (is_operator(&LEXEME[i + 1].to_string())
+                || is_paren(&LEXEME[i + 1].to_string())
+                || LEXEME[i + 1].is_whitespace())
+            {
                 token.push(LEXEME[i]);
             }
-            'N' => {
-                token.push(LEXEME[i]);
+            if LEXEME[i + 1].is_whitespace()
+                && is_variable(&token)
+                && !is_type(&token)
+                && is_operator(&LEXEME[i + 1].to_string())
+                && is_paren(&LEXEME[i + 1].to_string())
+            {
+                symbols.insert("lokovar", token);
+                token = String::new();
+            } else if LEXEME[i + 1].is_whitespace()
+                && is_type(&token)
+                && is_operator(&LEXEME[i + 1].to_string())
+                && is_paren(&LEXEME[i + 1].to_string())
+            {
+                symbols.insert("typeid", token);
+                token = String::new();
+            } else if LEXEME[i + 1].is_whitespace()
+                && is_number(&token)
+                && is_operator(&LEXEME[i + 1].to_string())
+                && is_paren(&LEXEME[i + 1].to_string())
+            {
+                symbols.insert("enby", token);
+                token = String::new();
+            } else if !is_number(&token)
+                && !is_operator(&LEXEME[i + 1].to_string())
+                && !is_paren(&LEXEME[i + 1].to_string())
+            {
+                symbols.insert("unknown", token);
+                token = String::new();
+                println!("Token {i} ({token}) is invalid.");
+            } else {
+                continue;
             }
-            '0' => {
-                token.push(LEXEME[i]);
-            }
-            _ => print!("H"),
         }
-        return LEXEME[i];
+        let clum = "+";
+        if is_operator(&clum) {
+            println!("Oohwee");
+        }
     }
 }
 
