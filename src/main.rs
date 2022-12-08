@@ -12,55 +12,28 @@ pub enum CharType {
     Unknown(char),
 }
 pub enum TokenType {
-    IntLit(i32),
-    KeyWord(String),
-    Ident(String),
-    AssignOp(char),
-    AddOp(char),
-    SubOp(char),
-    MultOp(char),
-    DivOp(char),
-    LeftParen(char),
-    RightParen(char),
-}
-
-#[derive(Hash, Eq, PartialEq, Debug, Default)]
-struct Symbol {
-    lokotype: String,
-    value: String,
-}
-
-trait Token {
-    fn tokenize(&self) -> String;
-}
-
-struct Char {
-    lokochar: char,
-}
-
-struct Lexer {}
-
-/*pub struct SymbolTable<K, V, S = RandomState> {
-    base: base::HashMap<K, V, S>,
-} */
-
-impl Symbol {
-    /*fn insert(&mut self, lokotype: &str, value: char) -> Option<char> {
-        self.base.insert()
-    } */
-
-    fn new(lokotype: &str, value: &str) -> Symbol {
-        Default::default()
-    }
+    IntLit,
+    KeyWord,
+    Ident,
+    Eq,
+    NotEq,
+    AddOp,
+    SubOp,
+    MultOp,
+    DivOp,
+    GreaterThan,
+    LessThan,
+    GorEQ,
+    LorEQ,
+    LeftParen,
+    RightParen,
+    Semicolon,
 }
 
 pub static mut CHAR_CLASS: Vec<u8> = Vec::new();
 pub static mut LEXEME: Vec<char> = Vec::new();
-pub static mut NEXT_CHAR: char = '0';
+pub static mut SYMBOLS: Vec<String> = Vec::new();
 pub static mut LEX_LEN: usize = 0;
-pub static mut TOKEN: Vec<u8> = Vec::new();
-pub static mut NEXT_TOKEN: Vec<u8> = Vec::new();
-pub static mut LEX_TYPE: Vec<char> = Vec::new();
 
 // This function invokes the other functions in the necessary order and reads the file as it is.
 pub fn main() {
@@ -80,6 +53,7 @@ pub fn main() {
 
     addchar().err();
     tokenize();
+    parser();
     let x = String::from("rnt");
     if is_type(&x) {
         println!("Yay!");
@@ -87,18 +61,39 @@ pub fn main() {
 }
 
 fn is_variable(var: &str) -> bool {
-    let regex = Regex::new("[a-zA-Z]+(_[a-zA-Z]+)*").unwrap();
-    return regex.is_match(&var);
+    let regex = Regex::new("[a-zA-Z]+(_[a-zA-Z]+)*$").unwrap();
+    return regex.is_match(&var) && !is_type(&var) && has_varcount(&var);
+}
+
+fn has_varcount(county: &str) -> bool {
+    if county.chars().count() == 6 || county.chars().count() == 7 || county.chars().count() == 8 {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 fn is_operator(op: &str) -> bool {
-    let regex = Regex::new("^\\+|-|\\*|^/$|^%$|^>(=)?$|^<(=)?&|(!|=)?=$").unwrap();
-    return regex.is_match(&op);
+    if op.eq("+")
+        || op.eq("-")
+        || op.eq("*")
+        || op.eq("/")
+        || op.eq("%")
+        || op.eq(">")
+        || op.eq(">=")
+        || op.eq("<")
+        || op.eq("<=")
+        || op.eq("=")
+        || op.eq("!=")
+    {
+        return true;
+    } else {
+        return false;
+    }
 }
 
 fn is_paren(par: &str) -> bool {
-    let regex = Regex::new("^(|)$").unwrap();
-    return regex.is_match(&par);
+    return par.eq("(") || par.eq(")");
 }
 
 fn is_number(num: &str) -> bool {
@@ -124,56 +119,136 @@ fn addchar() -> io::Result<()> {
 
 fn tokenize() {
     unsafe {
-        let mut symbols: HashMap<&str, String> = HashMap::default();
+        let mut typevec: Vec<String> = Vec::new();
         let mut token = String::new();
         for i in 0..LEXEME.len() - 1 {
-            if !LEXEME[i].is_whitespace()
-                && (is_operator(&LEXEME[i + 1].to_string())
-                || is_paren(&LEXEME[i + 1].to_string())
-                || LEXEME[i + 1].is_whitespace())
-            {
+            if !LEXEME[i].is_whitespace() {
                 token.push(LEXEME[i]);
+                if is_type(&token) {
+                    println!("Token type of {} is type id.", &token);
+                    SYMBOLS.push(token);
+                    token = String::new();
+                }
+                if is_operator(&token) {
+                    if token.eq("+") {
+                        println!("Token type of {} is add operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("-") {
+                        println!("Token type of {} is minus operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("*") {
+                        println!("Token type of {} is multiplication operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("/") {
+                        println!("Token type of {} is division operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("%") {
+                        println!("Token type of {} is modulus operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("=") && !LEXEME[i + 1].to_string().eq("==") {
+                        println!("Token type of {} is equal operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("==") {
+                        println!("Token type of {} is assignment operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("!=") {
+                        println!("Token type of {} is not equal operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq(">") && !LEXEME[i + 1].to_string().eq("=") {
+                        println!("Token type of {} is greater than operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("<") && !LEXEME[i + 1].to_string().eq("=") {
+                        println!("Token type of {} is less than operator.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq(">=") {
+                        println!(
+                            "Token type of {} is greater than or equal to operator.",
+                            &token
+                        );
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    } else if token.eq("<=") {
+                        println!(
+                            "Token type of {} is less than or equal to operator.",
+                            &token
+                        );
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    }
+                }
+                if is_paren(&token) {
+                    if token.eq("(") {
+                        println!("Token type of {} is open parenthesis.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    }
+                    if token.eq(")") {
+                        println!("Token type of {} is closed parenthesis.", &token);
+                        SYMBOLS.push(token);
+                        token = String::new();
+                    }
+                }
+                if is_variable(&token) && !LEXEME[i + 1].is_ascii_alphabetic() {
+                    println!("Token type of {} is variable.", &token);
+                    SYMBOLS.push(token);
+                    token = String::new();
+                }
+                if is_number(&token) && !LEXEME[i + 1].is_ascii_digit() {
+                    println!("Token type of {} is number.", &token);
+                    SYMBOLS.push(token);
+                    token = String::new();
+                }
+                if token.eq(";") {
+                    println!("Token type of {} is semicolon.", &token);
+                    SYMBOLS.push(token);
+                    token = String::new();
+                }
             }
-            if LEXEME[i + 1].is_whitespace()
-                && is_variable(&token)
-                && !is_type(&token)
-                && is_operator(&LEXEME[i + 1].to_string())
-                && is_paren(&LEXEME[i + 1].to_string())
-            {
-                symbols.insert("lokovar", token);
-                token = String::new();
-            } else if LEXEME[i + 1].is_whitespace()
-                && is_type(&token)
-                && is_operator(&LEXEME[i + 1].to_string())
-                && is_paren(&LEXEME[i + 1].to_string())
-            {
-                symbols.insert("typeid", token);
-                token = String::new();
-            } else if LEXEME[i + 1].is_whitespace()
-                && is_number(&token)
-                && is_operator(&LEXEME[i + 1].to_string())
-                && is_paren(&LEXEME[i + 1].to_string())
-            {
-                symbols.insert("enby", token);
-                token = String::new();
-            } else if !is_number(&token)
-                && !is_operator(&LEXEME[i + 1].to_string())
-                && !is_paren(&LEXEME[i + 1].to_string())
-            {
-                symbols.insert("unknown", token);
-                token = String::new();
-                println!("Token {i} ({token}) is invalid.");
-            } else {
-                continue;
-            }
-        }
-        let clum = "+";
-        if is_operator(&clum) {
-            println!("Oohwee");
         }
     }
 }
 
-fn lexer() {
-    unsafe {}
+fn parser() {
+    unsafe {
+        for i in 0..SYMBOLS.len() {
+            if SYMBOLS[i].eq("rnt") && is_variable(&SYMBOLS[i + 1]) {
+                if SYMBOLS[i + 2].eq("=") && is_paren(&SYMBOLS[i + 3]) {
+                    if is_number(&SYMBOLS[i + 4]) && SYMBOLS[i + 5].eq("+") {
+                        let a: i32 = SYMBOLS[i + 4].parse().unwrap();
+                        let b: i32 = SYMBOLS[i + 6].parse().unwrap();
+                        let c = a + b;
+                        println!("{}",c);
+                    }
+                    if is_number(&SYMBOLS[i + 4]) && SYMBOLS[i + 5].eq("-") {
+                        let a: i32 = SYMBOLS[i + 4].parse().unwrap();
+                        let b: i32 = SYMBOLS[i + 6].parse().unwrap();
+                        let c = a - b;
+                        println!("{}",c);
+                    }
+                    if is_number(&SYMBOLS[i + 4]) && SYMBOLS[i + 5].eq("*") {
+                        let a: i32 = SYMBOLS[i + 4].parse().unwrap();
+                        let b: i32 = SYMBOLS[i + 6].parse().unwrap();
+                        let c = a * b;
+                        println!("{}",c);
+                    }
+                    if is_number(&SYMBOLS[i + 4]) && SYMBOLS[i + 5].eq("/") {
+                        let a: i32 = SYMBOLS[i + 4].parse().unwrap();
+                        let b: i32 = SYMBOLS[i + 6].parse().unwrap();
+                        let c = a / b;
+                        println!("{}",c);
+                    }
+                }
+            }
+        }
+    }
 }
